@@ -89,6 +89,7 @@
         let titleScreen = true; 
         let animationId;
         let lastTime = 0;
+        let ballPaused = false;
         
         
        
@@ -323,6 +324,10 @@
             resetBricks();
             gameRunning = true;
             gameOver = false;
+            ballPaused = true;
+            setTimeout(() => {
+                ballPaused = false; 
+            }, 1000);
 
             requestAnimationFrame(draw);
         }
@@ -372,13 +377,16 @@
                         if (!lives) {
                             triggerGameOver();
                             } else {
+                                lives -= 1
                                 x = canvas.width / 2;
                                 y = canvas.height - (canvas.height / 8);
                                 ballSpeedX = Math.abs(ballSpeedX);
                                 ballSpeedY = - Math.abs(ballSpeedY);
                                 paddleX = (canvas.width - paddleWidth) / 2;
-                                lives -= 1
-
+                                ballPaused = true;
+                                setTimeout(() => {
+                                    ballPaused = false; 
+                                }, 1000);
                             }
                         }
                     }
@@ -389,22 +397,17 @@
                 } else if (leftPressed) {
                     paddleX = Math.max(paddleX - paddleSpeed * delta, 5);
                 }
-                prevX = x;
-                prevY = y;
-                x += ballSpeedX * delta;
-                y += ballSpeedY * delta;
+                if (!ballPaused) {
+                    prevX = x;
+                    prevY = y;
+                    x += ballSpeedX * delta;
+                    y += ballSpeedY * delta;
+                }
             } else if (gameOver) {
                 drawGameOver();
             }
 
             animationId = requestAnimationFrame(draw);
-        }
-  
-
-        function startGame() {
-            if (!animationId) {   // only start if not already running
-                requestAnimationFrame(draw);
-            }
         }
         
         draw();
