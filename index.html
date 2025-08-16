@@ -66,14 +66,14 @@
 
         let x = canvas.width / 2;
         let y = canvas.height - (canvas.height / 8);
-        let dx = canvas.height / 240;
-        let dy = - (canvas.height / 240);
+        let ballSpeedX = 2 * canvas.height / 5;
+        let ballSpeedY = - 2 * canvas.height / 5;
         let prevX = x;
         let prevY = y;
 
         const paddleHeight = canvas.height / 24;
         const paddleWidth = canvas.width / 6;
-        let paddleSpeed = canvas.height / 96
+        let paddleSpeed =  4 * canvas.height / 5 // per second
 
         let paddleX = (canvas.width - paddleWidth) / 2;
         let ballcolor = "white"
@@ -88,6 +88,7 @@
         let gameOver = false;
         let titleScreen = true; 
         let animationId;
+        let lastTime = 0;
         
         
        
@@ -141,7 +142,7 @@
                         const b = bricks[c][r];
                         if (b.status === 1) {
                             bricksRemaining++;
-                            
+                            // Check if ball in bounding box
                             if (
                                 x + ballRadius > b.x &&
                                 x - ballRadius < b.x + brickWidth &&
@@ -151,16 +152,16 @@
                                 // Determine side of collision based on previous position
                                 if (prevY + ballRadius <= b.y) {
                                     // Came from above
-                                    dy = -Math.abs(dy);
+                                    ballSpeedY = -Math.abs(ballSpeedY);
                                 } else if (prevY - ballRadius >= b.y + brickHeight) {
                                     // Came from below
-                                    dy = Math.abs(dy);
+                                    ballSpeedY = Math.abs(ballSpeedY);
                                 } else if (prevX + ballRadius <= b.x) {
                                     // Came from left
-                                    dx = -Math.abs(dx);
+                                    ballSpeedX = -Math.abs(ballSpeedX);
                                 } else if (prevX - ballRadius >= b.x + brickWidth) {
                                     // Came from right
-                                    dx = Math.abs(dx);
+                                    ballSpeedX = Math.abs(ballSpeedX);
                                 }
 
                                 b.status = 0;
@@ -175,13 +176,13 @@
             if (bricksRemaining === 0) {
                 pointValue *= 2
                 level += 1
-                dx *= 1.1
-                dy *= 1.1
+                ballSpeedX *= 1.1
+                ballSpeedY *= 1.1
                 paddleSpeed *= 1.1
                 x = canvas.width / 2;
                 y = canvas.height - (canvas.height / 8);
-                dx = Math.abs(dx);
-                dy = - Math.abs(dy);
+                ballSpeedX = Math.abs(ballSpeedX);
+                ballSpeedY = - Math.abs(ballSpeedY);
                 paddleX = (canvas.width - paddleWidth) / 2;
                 resetBricks();
             }
@@ -294,9 +295,9 @@
             lives = 3;
             level = 1;
             pointValue = 10;
-            paddleSpeed = canvas.height / 96;
-            dx = canvas.height / 240;
-            dy = - (canvas.height / 240);
+            paddleSpeed = 4 * canvas.height / 5;
+            ballSpeedX = 2 * canvas.height / 5;
+            ballSpeedY = - 2 * canvas.height / 5;
             x = canvas.width / 2;
             y = canvas.height - (canvas.height / 8);
             paddleX = (canvas.width - paddleWidth) / 2;
@@ -304,7 +305,7 @@
             gameRunning = true;
             gameOver = false;
 
-            draw(); 
+            requestAnimationFrame(draw);
         }
 
         function drawTitleScreen() {
@@ -320,7 +321,10 @@
             ctx.fillText("Press START to play", canvas.width / 2, canvas.height / 2);
         }
 
-        function draw() {
+        function draw(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const delta = (timestamp - lastTime) / 1000; // seconds since last frame
+            lastTime = timestamp;
             
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             if (titleScreen) {
@@ -334,25 +338,25 @@
                 drawLevel()
                 collisionDetection();
 
-                if (x + dx > canvas.width - ballRadius || x + dx < ballRadius) {
-                    dx = -dx;
+                if (x + ballSpeedX * delta > canvas.width - ballRadius || x + ballSpeedX * delta < ballRadius) {
+                    ballSpeedX = -ballSpeedX;
                 }
                 
-                if (y + dy < ballRadius) {
-                    dy = -dy;
+                if (y + ballSpeedY * delta < ballRadius) {
+                    ballSpeedY = -ballSpeedY;
                 }
-                else if (y + dy > canvas.height - ballRadius - paddleHeight - 10) {
+                else if (y + ballSpeedY * delta > canvas.height - ballRadius - paddleHeight - 10) {
                     if (x > paddleX && x < paddleX + paddleWidth) {
-                        dy = -Math.abs(dy);
+                        ballSpeedY = -Math.abs(ballSpeedY);
                         y = canvas.height - ballRadius - paddleHeight - 10;
-                    } else if (y + dy > canvas.height){
+                    } else if (y + ballSpeedY * delta > canvas.height){
                         if (!lives) {
                             triggerGameOver();
                             } else {
                                 x = canvas.width / 2;
                                 y = canvas.height - (canvas.height / 8);
-                                dx = Math.abs(dx);
-                                dy = - Math.abs(dy);
+                                ballSpeedX = Math.abs(ballSpeedX);
+                                ballSpeedY = - Math.abs(ballSpeedY);
                                 paddleX = (canvas.width - paddleWidth) / 2;
                                 lives -= 1
 
@@ -362,14 +366,14 @@
                 
 
                 if (rightPressed) {
-                paddleX = Math.min(paddleX + paddleSpeed, canvas.width - paddleWidth - 5);
+                paddleX = Math.min(paddleX + paddleSpeed * delta, canvas.width - paddleWidth - 5);
                 } else if (leftPressed) {
-                    paddleX = Math.max(paddleX - paddleSpeed, 5);
+                    paddleX = Math.max(paddleX - paddleSpeed * delta, 5);
                 }
                 prevX = x;
                 prevY = y;
-                x += dx;
-                y += dy;
+                x += ballSpeedX * delta;
+                y += ballSpeedY * delta;
             } else if (gameOver) {
                 drawGameOver();
             }
@@ -380,7 +384,7 @@
 
         function startGame() {
             if (!animationId) {   // only start if not already running
-                draw();
+                requestAnimationFrame(draw);
             }
         }
         
